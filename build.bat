@@ -10,7 +10,7 @@ msbuild iocp.sln /nologo /clp:Summary;Verbosity=minimal /p:Configuration=Release
 
 copy Release\server.exe out
 copy Release\client.exe out
-copy Release\iocp.lib out
+copy Release\iocp.dll out
 
 cd server
 rd /S /Q Debug

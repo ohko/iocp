@@ -53,3 +53,10 @@ private:
 	static void threadClient(void *param); // 服务端接受数据线程
 };
 
+typedef IOCP* (*IocpServer)(IOCPServer *serverClass, bool packed);
+typedef IOCP* (*IocpClient)(IOCPClient *clientClass, bool packed);
+#define IocpInitApis()\
+HMODULE hDll = LoadLibraryA("iocp.dll");\
+if(!hDll){MessageBoxA(0,"Can't load iocp.dll!","Error",0);return;}\
+IocpServer iocpServer = (IocpServer)GetProcAddress(hDll, "getServerInstance");\
+IocpClient iocpClient = (IocpClient)GetProcAddress(hDll, "getClientInstance");

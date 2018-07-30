@@ -304,3 +304,13 @@ int IOCP::Send(SOCKET s, char* buffer, int len) {
 void IOCP::Close() {
 	if (m_s) { closesocket(m_s); m_s = 0; }
 }
+
+extern "C" __declspec(dllexport) IOCP *getServerInstance(IOCPServer *serverClass, bool packed) { return new IOCP(serverClass, packed); }
+extern "C" __declspec(dllexport) IOCP *getClientInstance(IOCPClient *clientClass, bool packed) { return new IOCP(clientClass, packed); }
+extern "C" __declspec(dllexport) IOCP *delInstance(IOCP *client) { delete client; return 0; }
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
+	if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+	}
+	return TRUE;
+}
