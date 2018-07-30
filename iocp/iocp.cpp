@@ -14,7 +14,7 @@ typedef struct IOCP_CONTEXT {
 } *LPPER_IO_DATA;
 
 #define MAX_CLIENT_COUNT 0x100
-#define DEBAULT_BUFFSIZE 0x1000
+#define DEBAULT_BUFFSIZE 0x20
 
 IOCP::IOCP(IOCPClient *clientClass, bool packed) {
 	m_s = 0;
