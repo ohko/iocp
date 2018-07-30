@@ -156,6 +156,7 @@ void IOCP::threadServer(void *param) {
 		// callback
 		if (!cls->m_packed) cls->m_clsServer->onRecv(p_ctx->s, p_ctx->ip, p_ctx->port, p_ctx->wsaBuf.buf, NumBytesRecv);
 		else {
+			cls->m_lock.lock();
 			std::string *tmp = &cls->m_tmpBuf[p_ctx->s];
 			tmp->append(p_ctx->wsaBuf.buf, NumBytesRecv);
 			if (tmp->length() > 4) {
@@ -168,6 +169,7 @@ void IOCP::threadServer(void *param) {
 					needLen = *(int*)tmp->c_str();
 				}
 			}
+			cls->m_lock.unlock();
 		}
 
 		// next
@@ -183,8 +185,7 @@ void IOCP::threadServer(void *param) {
 	cls->m_canRelesase = true;
 }
 
-
-bool IOCP::StartClient(char *host, int port) {
+bool IOCP::StartAsyncClient(char *host, int port) {
 	WSADATA WsaDat;
 	if (WSAStartup(MAKEWORD(2, 2), &WsaDat) != 0) return false;
 
@@ -224,6 +225,30 @@ bool IOCP::StartClient(char *host, int port) {
 		if (m_hIocp != 0) { CloseHandle(m_hIocp); m_hIocp = 0; }
 		delete[] m_ctx->wsaBuf.buf;
 		delete m_ctx;
+		return false;
+	}
+
+	return true;
+}
+
+bool IOCP::StartSyncClient(char *host, int port) {
+	WSADATA WsaDat;
+	if (WSAStartup(MAKEWORD(2, 2), &WsaDat) != 0) return false;
+
+	m_s = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if (m_s == INVALID_SOCKET) {
+		m_s = 0;
+		return false;
+	}
+
+	SOCKADDR_IN addr;
+	addr.sin_family = AF_INET;
+	inet_pton(AF_INET, host, &addr.sin_addr.s_addr);
+	addr.sin_port = htons(port);
+
+	// connect
+	if (WSAConnect(m_s, (SOCKADDR*)(&addr), sizeof(addr), NULL, NULL, NULL, NULL) == SOCKET_ERROR) {
+		closesocket(m_s); m_s = 0;
 		return false;
 	}
 
@@ -285,8 +310,47 @@ void IOCP::threadClient(void *param) {
 }
 
 
-int IOCP::Send(char* buffer, int len) {
+int IOCP::SendAsync(char* buffer, int len) {
 	return Send(m_s, buffer, len);
+}
+int IOCP::SendSync(char **needFreeDst, char* buffer, int len) {
+	m_lock.lock();
+
+	Send(m_s, buffer, len);
+
+	// recv
+	std::string tmp;
+	char buf[DEBAULT_BUFFSIZE];
+	while (1) {
+		int i = recv(m_s, buf, DEBAULT_BUFFSIZE, 0);
+		if (i == 0) {
+			m_lock.unlock();
+			*needFreeDst = 0;
+			return 0;
+		}
+
+		if (!m_packed) {
+			tmp.append(buf, i);
+			break;
+		}
+
+		tmp.append(buf, i);
+		if (tmp.length() > 4) {
+			unsigned int needLen = (*(int*)tmp.c_str());
+			if (needLen <= tmp.length()) {
+				tmp.erase(0, 4);
+				break;
+			}
+		}
+	}
+
+	int dstLen = tmp.length();
+	*needFreeDst = (char*)malloc(dstLen);
+	memcpy(*needFreeDst, tmp.c_str(), dstLen);
+	// need user free(needFreeDst)
+
+	m_lock.unlock();
+	return dstLen;
 }
 
 int IOCP::Send(SOCKET s, char* buffer, int len) {

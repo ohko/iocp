@@ -15,8 +15,9 @@
 #endif // !debug
 
 class IOCPClient {
+	std::mutex m_lock; // 同步发送数据使用,同一时间只能一个发送和接收
 public:
-	virtual void onRecv(char *buf, int len) = 0;
+	virtual void onRecv(char *buf, int len) {};
 	virtual void onClose() {};
 };
 class IOCPServer {
@@ -33,8 +34,10 @@ public:
 	IOCP(IOCPClient *clientClass, bool packed); // 客户端对象
 	virtual ~IOCP(); // 释放
 	virtual bool StartServer(char *host, int port); // 启动服务器
-	virtual bool StartClient(char *host, int port); // 启动客户端
-	virtual int Send(char* buffer, int len); // 发送数据 
+	virtual bool StartSyncClient(char *host, int port); // 启动同步客户端
+	virtual bool StartAsyncClient(char *host, int port); // 启动异步客户端
+	virtual int SendSync(char **needFreeDst, char* buffer, int len); // client发送同步数据,needFreeDst需要调用端用free释放内存
+	virtual int SendAsync(char* buffer, int len); // client发送异步数据
 	virtual int Send(SOCKET s, char* buffer, int len); // 发送数据 
 	virtual void Close(); // 关闭客户端或服务器
 private:
@@ -57,6 +60,7 @@ typedef IOCP* (*IocpServer)(IOCPServer *serverClass, bool packed);
 typedef IOCP* (*IocpClient)(IOCPClient *clientClass, bool packed);
 #define IocpInitApis()\
 HMODULE hDll = LoadLibraryA("iocp.dll");\
-if(!hDll){MessageBoxA(0,"Can't load iocp.dll!","Error",0);return;}\
-IocpServer iocpServer = (IocpServer)GetProcAddress(hDll, "getServerInstance");\
-IocpClient iocpClient = (IocpClient)GetProcAddress(hDll, "getClientInstance");
+IocpServer iocpServer;IocpClient iocpClient;\
+if(!hDll){MessageBoxA(0,"Can't load iocp.dll!","Error",0);}\
+iocpServer = (IocpServer)GetProcAddress(hDll, "getServerInstance");\
+iocpClient = (IocpClient)GetProcAddress(hDll, "getClientInstance");
