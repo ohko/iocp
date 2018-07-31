@@ -40,6 +40,7 @@ public:
 	virtual int SendAsync(char* buffer, int len); // client发送异步数据
 	virtual int Send(SOCKET s, char* buffer, int len); // 发送数据 
 	virtual void Close(); // 关闭客户端或服务器
+	virtual void Free(char* buffer); // 释放malloc申请的内存
 private:
 	bool m_canRelesase; // 是否可以释放对象了
 	SOCKET m_s; // 主socket

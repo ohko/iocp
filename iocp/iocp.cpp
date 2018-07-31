@@ -345,12 +345,15 @@ int IOCP::SendSync(char **needFreeDst, char* buffer, int len) {
 	}
 
 	int dstLen = tmp.length();
-	*needFreeDst = (char*)malloc(dstLen);
-	memcpy(*needFreeDst, tmp.c_str(), dstLen);
+	*needFreeDst = (char*)malloc(dstLen - 8);
+	memcpy(*needFreeDst, tmp.c_str() + 8, dstLen - 8);
 	// need user free(needFreeDst)
 
 	m_lock.unlock();
 	return dstLen;
+}
+void IOCP::Free(char* buffer) {
+	free(buffer);
 }
 
 int IOCP::Send(SOCKET s, char* buffer, int len) {
